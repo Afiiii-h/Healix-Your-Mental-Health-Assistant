@@ -3,8 +3,10 @@ import google.generativeai as genai
 from textblob import TextBlob
 import pandas as pd
 
-GOOGLE_API_KEY = "AIzaSyBBZK2d07GShrbuvcDgnezdGBQd08REloU" 
-genai.configure(api_key=GOOGLE_API_KEY)
+if "GOOGLE_API_KEY" in st.secrets:
+    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+else:
+    st.error("Please set the GOOGLE_API_KEY in Streamlit Secrets.")
 
 st.set_page_config(page_title="Healix PK", page_icon="🌱", layout="centered")
 
@@ -108,8 +110,3 @@ if user_input := st.chat_input("How are you feeling right now?"):
         st.session_state.messages.append({"role": "assistant", "content": response})
         if polarity < 0:
             st.info(f"💡 Tip: {strategy}")
-
-if st.session_state.mood_tracker:
-    with st.expander("📊 View Your Mood Journey"):
-        mood_data = pd.DataFrame(st.session_state.mood_tracker, columns=["Message", "Sentiment", "Polarity"])
-        st.line_chart(mood_data['Polarity'])
