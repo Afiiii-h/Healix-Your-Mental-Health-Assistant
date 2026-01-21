@@ -41,7 +41,7 @@ def generate_response(prompt, attached_file=None):
     for attempt in range(3):
         try:
             model = genai.GenerativeModel(
-                model_name='gemini-2.5-flash-lite', 
+                model_name='gemini-2.5-flash', 
                 system_instruction=instructions
             )
             
@@ -111,7 +111,7 @@ with st.sidebar:
     - **Rozan Helpline:** 0304-1111741
     """)
     st.divider()
-    if st.button("🗑️ Reset Chat & API Connection"):
+    if st.button("🗑️ Reset Chat"):
         st.session_state.messages = []
         st.session_state.mood_tracker = []
         st.session_state.voice_draft = ""
@@ -129,9 +129,23 @@ if 'awaiting_review' not in st.session_state:
     st.session_state.awaiting_review = False
 
 # -------- Chat History --------
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+for idx, message in enumerate(st.session_state.messages):
+    col_msg, col_copy = st.columns([9, 1])
+
+    with col_msg:
+        with st.chat_message(message["role"]):
+             st.markdown(message["content"])
+
+    with col_copy:
+        copy_key = f"copy_{idx}"
+        # We use a button to trigger the copy. 
+        # Since Streamlit runs on a server, we use st.code with language 'markdown' 
+        # as it provides a native "copy" button in a very clean way for users.
+        if st.button("📋", key=copy_key, help=f"Copy {message['role']} message"):
+            # Using st.code here for a single line just to leverage the copy button 
+            # while maintaining the clean layout you wanted.
+            st.toast("Click the copy icon in the text box below ✅")
+            st.code(message["content"], language="markdown")
 
 # -------- Voice Review (ChatGPT-style) --------
 if st.session_state.awaiting_review:
@@ -175,7 +189,7 @@ if user_input:
             try:
                 audio_bytes = user_input.audio.getvalue()
                 transcriber = genai.GenerativeModel(
-                model_name="gemini-2.5-flash-lite"
+                model_name="gemini-2.5-flash"
             )
                 transcript_response = transcriber.generate_content([
                    """
