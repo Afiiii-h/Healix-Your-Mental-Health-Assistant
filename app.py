@@ -127,19 +127,14 @@ if 'voice_draft' not in st.session_state:
 if 'awaiting_review' not in st.session_state:
     st.session_state.awaiting_review = False
 
+# --- FIXED SECTION: Displays chat history with permanent copy buttons ---
 for idx, message in enumerate(st.session_state.messages):
-    col_msg, col_copy = st.columns([9, 1])
-
-    with col_msg:
-        with st.chat_message(message["role"]):
-             st.markdown(message["content"])
-
-    with col_copy:
-        copy_key = f"copy_{idx}"
-       
-        if st.button("📋", key=copy_key, help=f"Copy {message['role']} message"):
-            st.toast("Click the copy icon in the text box below ✅")
-            st.code(message["content"], language="markdown")
+    with st.chat_message(message["role"]):
+        col1, col2 = st.columns([0.9, 0.1])
+        with col1:
+            st.markdown(message["content"])
+        with col2:
+            st.button("📋", key=f"hist_{idx}", on_click=lambda text=message["content"]: st.write(f'<script>navigator.clipboard.writeText("{text}")</script>', unsafe_allow_html=True), help="Copy to clipboard")
 
 if st.session_state.awaiting_review:
     st.info("🎙️ Transcribed text — review or edit before sending")
@@ -184,23 +179,23 @@ if user_input:
                 model_name="gemini-2.5-flash"
             )
                 transcript_response = transcriber.generate_content([
-                   """
-                   You are a speech-to-text engine.
-                   Transcribe the audio EXACTLY as spoken.
+                    """
+                    You are a speech-to-text engine.
+                    Transcribe the audio EXACTLY as spoken.
 
-                   Rules:
-                   - Do NOT paraphrase
-                   - Do NOT summarize
-                   - Do NOT guess unclear words
-                   - Keep names, accents, and grammar exactly as heard
-                   - If a word is unclear, write [unclear]
-                   - Return ONLY the raw transcript text
-                  """,
-                   {
-                      "mime_type": user_input.audio.type,
-                      "data": audio_bytes
-                   }
-             ])
+                    Rules:
+                    - Do NOT paraphrase
+                    - Do NOT summarize
+                    - Do NOT guess unclear words
+                    - Keep names, accents, and grammar exactly as heard
+                    - If a word is unclear, write [unclear]
+                    - Return ONLY the raw transcript text
+                   """,
+                    {
+                       "mime_type": user_input.audio.type,
+                       "data": audio_bytes
+                    }
+              ])
 
                 st.session_state.voice_draft = transcript_response.text.strip()
                 st.session_state.awaiting_review = True
@@ -220,9 +215,13 @@ if text_content and not st.session_state.awaiting_review:
     st.session_state.messages.append({"role": "user", "content": text_content})
     
     with st.chat_message("user"):
-        st.markdown(text_content)
-        if active_file:
-            st.image(active_file)
+        col1, col2 = st.columns([0.9, 0.1])
+        with col1:
+            st.markdown(text_content)
+            if active_file:
+                st.image(active_file)
+        with col2:
+            st.button("📋", key="new_user", help="Copy to clipboard")
 
     sentiment, polarity = analyze_sentiment(text_content)
     st.session_state.mood_tracker.append((text_content, sentiment, polarity))
@@ -230,7 +229,12 @@ if text_content and not st.session_state.awaiting_review:
 
     with st.chat_message("assistant"):
         response = generate_response(text_content, attached_file=active_file)
-        st.markdown(response)
+        col1, col2 = st.columns([0.9, 0.05])
+        with col1:
+            st.markdown(response)
+        with col2:
+            st.button("📋", key="new_assist", help="Copy to clipboard")
+        
         st.session_state.messages.append({"role": "assistant", "content": response})
 
         if polarity < 0:
