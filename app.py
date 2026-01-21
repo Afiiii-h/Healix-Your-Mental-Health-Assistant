@@ -3,6 +3,55 @@ import google.generativeai as genai
 from textblob import TextBlob
 import pandas as pd
 import time
+import streamlit.components.v1 as components
+
+def copy_button(text, key):
+    html = f"""
+    <style>
+        body {{ margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }}
+        .container {{
+            position: relative;
+            width: 100%;
+            height: 40px;
+        }}
+        button {{ 
+            top: 0;
+            right: 35px;
+            border: none; 
+            background: none; 
+            cursor: pointer; 
+            font-size: 18px; 
+            padding: 5px;
+            z-index: 10;
+        }}
+        #msg_{key} {{
+            right: 18px;
+            font-size: 12px;
+            color: #ffff00;
+            display: none;
+            font-weight: bold;
+        }}
+    </style>
+    <div class="container">
+        <span id="msg_{key}">Copied!</span>
+        <button id="{key}">📋</button>
+    </div>
+    <script>
+    document.getElementById("{key}").addEventListener("click", function() {{
+        const textToCopy = `{text.replace('`', '\\`').replace('$', '\\$')}`;
+        navigator.clipboard.writeText(textToCopy).then(function() {{
+            // Show feedback
+            const msg = document.getElementById("msg_{key}");
+            msg.style.display = "block";
+            setTimeout(() => {{ msg.style.display = "none"; }}, 1000);
+            
+            // Send message to Streamlit
+            window.parent.postMessage({{type: 'streamlit:set_component_value', value: '{key}'}}, '*');
+        }});
+    }});
+    </script>
+    """
+    return components.html(html, height=40)
 
 if "GOOGLE_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
@@ -127,14 +176,13 @@ if 'voice_draft' not in st.session_state:
 if 'awaiting_review' not in st.session_state:
     st.session_state.awaiting_review = False
 
-# --- FIXED SECTION: Displays chat history with permanent copy buttons ---
 for idx, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         col1, col2 = st.columns([0.9, 0.1])
         with col1:
             st.markdown(message["content"])
         with col2:
-            st.button("📋", key=f"hist_{idx}", on_click=lambda text=message["content"]: st.write(f'<script>navigator.clipboard.writeText("{text}")</script>', unsafe_allow_html=True), help="Copy to clipboard")
+            copy_button(message["content"], f"hist_{idx}")
 
 if st.session_state.awaiting_review:
     st.info("🎙️ Transcribed text — review or edit before sending")
@@ -142,7 +190,7 @@ if st.session_state.awaiting_review:
     edited_text = st.text_area(
         "Your message:",
         value=st.session_state.voice_draft,
-        height=120
+        height=130
     )
 
     col1, col2 = st.columns(2)
@@ -190,7 +238,7 @@ if user_input:
                     - Keep names, accents, and grammar exactly as heard
                     - If a word is unclear, write [unclear]
                     - Return ONLY the raw transcript text
-                   """,
+                    """,
                     {
                        "mime_type": user_input.audio.type,
                        "data": audio_bytes
@@ -215,13 +263,13 @@ if text_content and not st.session_state.awaiting_review:
     st.session_state.messages.append({"role": "user", "content": text_content})
     
     with st.chat_message("user"):
-        col1, col2 = st.columns([0.9, 0.1])
+        col1, col2 = st.columns([0.9, 0.15])
         with col1:
             st.markdown(text_content)
             if active_file:
                 st.image(active_file)
         with col2:
-            st.button("📋", key="new_user", help="Copy to clipboard")
+            copy_button(text_content, "new_user")
 
     sentiment, polarity = analyze_sentiment(text_content)
     st.session_state.mood_tracker.append((text_content, sentiment, polarity))
@@ -229,11 +277,11 @@ if text_content and not st.session_state.awaiting_review:
 
     with st.chat_message("assistant"):
         response = generate_response(text_content, attached_file=active_file)
-        col1, col2 = st.columns([0.9, 0.05])
+        col1, col2 = st.columns([0.9, 0.15])
         with col1:
             st.markdown(response)
         with col2:
-            st.button("📋", key="new_assist", help="Copy to clipboard")
+            copy_button(response, "new_assist")
         
         st.session_state.messages.append({"role": "assistant", "content": response})
 
