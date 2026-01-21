@@ -2,7 +2,7 @@ import streamlit as st
 import google.generativeai as genai 
 from textblob import TextBlob
 import pandas as pd
-import time  # For the retry logic
+import time
 
 if "GOOGLE_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
@@ -118,7 +118,6 @@ with st.sidebar:
         st.session_state.awaiting_review = False
         st.rerun()
 
-# -------- Session State --------
 if 'messages' not in st.session_state:
     st.session_state.messages = []
 if 'mood_tracker' not in st.session_state:
@@ -128,7 +127,6 @@ if 'voice_draft' not in st.session_state:
 if 'awaiting_review' not in st.session_state:
     st.session_state.awaiting_review = False
 
-# -------- Chat History --------
 for idx, message in enumerate(st.session_state.messages):
     col_msg, col_copy = st.columns([9, 1])
 
@@ -138,16 +136,11 @@ for idx, message in enumerate(st.session_state.messages):
 
     with col_copy:
         copy_key = f"copy_{idx}"
-        # We use a button to trigger the copy. 
-        # Since Streamlit runs on a server, we use st.code with language 'markdown' 
-        # as it provides a native "copy" button in a very clean way for users.
+       
         if st.button("📋", key=copy_key, help=f"Copy {message['role']} message"):
-            # Using st.code here for a single line just to leverage the copy button 
-            # while maintaining the clean layout you wanted.
             st.toast("Click the copy icon in the text box below ✅")
             st.code(message["content"], language="markdown")
 
-# -------- Voice Review (ChatGPT-style) --------
 if st.session_state.awaiting_review:
     st.info("🎙️ Transcribed text — review or edit before sending")
 
@@ -172,7 +165,6 @@ if st.session_state.awaiting_review:
             st.session_state.awaiting_review = False
             st.rerun()
 
-# -------- Input --------
 user_input = st.chat_input(
     "How are you feeling right now?", 
     accept_file=True, 
@@ -224,7 +216,6 @@ elif "ready_to_process" in st.session_state:
     text_content = st.session_state.ready_to_process
     del st.session_state.ready_to_process
 
-# -------- AI LOGIC --------
 if text_content and not st.session_state.awaiting_review:
     st.session_state.messages.append({"role": "user", "content": text_content})
     
